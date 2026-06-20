@@ -1,0 +1,37 @@
+# ---- env files, keys, certs (never commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+credentials*
+
+# ---- runtime data, media, recorded footage (never commit) ----
+data/
+app/data/
+recordings/
+timelapses/
+flagged/
+media/
+snapshots/
+*.mp4
+*.jpg
+*.jpeg
+
+# ---- python ----
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+
+# ---- editor / OS ----
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

@@ -1,0 +1,57 @@
+# ============================================================================
+# EXAMPLE — adapt to your setup. This is documentation, not a mandated stack.
+#
+# Minimal: the nvr-viewer image + a generic MediaMTX (bring your own / adapt).
+# There is NO Docker socket mounted anywhere, and nothing privileged.
+#
+# SECURITY: the viewer ships UNAUTHENTICATED by default. Do not expose it (or
+# your cameras) to the internet without putting your own auth/VPN in front.
+# See the README "Security" section.
+# ============================================================================
+services:
+  nvr-viewer:
+    build: ./app           # or: image: <your-registry>/nvr-viewer:latest
+    image: nvr-viewer:latest
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
+      - BRAND=NVR
+      # Point at YOUR MediaMTX API (camera auto-discovery):
+      - MEDIAMTX_API=http://mediamtx:9997
+      # Where the BROWSER fetches HLS. Typically your reverse proxy routes this
+      # prefix to MediaMTX :8888 (e.g. /hls/<cam>/index.m3u8). For a no-proxy
+      # local test you can publish MediaMTX :8888 and set an absolute URL here.
+      - HLS_PREFIX=/hls
+      # Optional detection (run the Frigate companion separately):
+      # - FRIGATE_API=http://frigate:5000
+      # Optional zone/mask editor (write-and-prompt; the viewer never restarts
+      # Frigate and holds no Docker socket):
+      # - FRIGATE_CONFIG=/frigate-config/config.yml
+      # Optional: display a proxy-passed username (read-only; never grants admin):
+      # - TRUSTED_USER_HEADER=X-Forwarded-User
+    volumes:
+      - ./data:/data                                    # rw: cache, settings.json, admin.json
+      - /srv/nvr/recordings:/recordings:ro              # your recorder's output (read-only)
+      - /srv/nvr/timelapses:/timelapses:ro              # nightly timelapses (read-only)
+      - /srv/nvr/flagged:/flagged                       # rw: saved flagged-alert clips
+      # - /srv/frigate/config:/frigate-config           # rw: ONLY if using the zone editor
+    ports:
+      # Bind to localhost and put a reverse proxy / auth in front (see SECURITY).
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - mediamtx
+
+  # ---- Convenience example MediaMTX — BRING YOUR OWN / ADAPT. --------------
+  # Camera source URLs (with credentials) are injected via env (not committed).
+  # See companion/mediamtx/mediamtx.example.yml for the full annotated config.
+  mediamtx:
+    image: bluenviron/mediamtx:latest-ffmpeg
+    restart: unless-stopped
+    volumes:
+      - ./companion/mediamtx/mediamtx.example.yml:/mediamtx.yml:ro
+    # env_file: [ .env ]   # provides MTX_PATHS_<CAM>SRC_SOURCE=rtsp://user:pass@cam-ip/...
+    # ports:
+    #   - "127.0.0.1:8888:8888"   # only if you serve HLS without a reverse proxy
+
+# A reverse proxy (Caddy/nginx/Traefik) in front is recommended: terminate TLS,
+# add authentication, and route the viewer + the HLS_PREFIX path to MediaMTX.

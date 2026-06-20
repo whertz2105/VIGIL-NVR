@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>{% block title %}NVR{% endblock %} · {{ brand }}</title>
+  <link rel="stylesheet" href="/static/css/styles.css?v={{ static_v }}">
+  {# Per-camera colour overrides (only for cameras an admin has customised; the
+     default look is untouched until then). Placed after the stylesheet so it wins. #}
+  {% if cameras %}<style>
+  {% for name, c in cameras.items() %}{% if c.color %}:root{--cam-{{ name }}:{{ c.color }};}
+  .ev-marker.cam-{{ name }},.ev-key.cam-{{ name }}{background:{{ c.color }};}
+  .alert-camtag.cam-{{ name }}{color:{{ c.color }};}
+  .alert-thumb.cam-{{ name }},.sa-item.cam-{{ name }}{border-left-color:{{ c.color }};}
+  {% endif %}{% endfor %}</style>{% endif %}
+  <script>window.NVR = {{ nvr_js | tojson }};
+  window.camLabel = function (n) {
+    var c = (window.NVR && window.NVR.cameras && window.NVR.cameras[n]) || null;
+    if (c && c.label) return c.label;
+    return n ? n.charAt(0).toUpperCase() + n.slice(1) : n;
+  };</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">{{ brand }}</div>
+    <nav class="nav">
+      {% if tabs.live %}<a href="/" class="{{ 'active' if active == 'live' else '' }}">Live</a>{% endif %}
+      {% if tabs.recordings %}<a href="/recordings" class="{{ 'active' if active == 'recordings' else '' }}">Recordings</a>{% endif %}
+      {% if tabs.timelapse %}<a href="/timelapse" class="{{ 'active' if active == 'timelapse' else '' }}">Timelapse</a>{% endif %}
+      {% if tabs.alerts %}<a href="/alerts" class="{{ 'active' if active == 'alerts' else '' }}">Saved Alerts</a>{% endif %}
+      {% if is_admin %}<a href="/settings" class="{{ 'active' if active == 'settings' else '' }}">Settings</a>{% endif %}
+    </nav>
+    <div class="user">
+      {# The app's own admin session is the sole source of truth for admin access.
+         An optional proxy-passed username (TRUSTED_USER_HEADER) is shown read-only
+         and never grants admin. #}
+      {% if user %}<span class="user-name">{{ user }}</span>{% endif %}
+      {% if is_admin %}
+        <form method="post" action="/logout" class="logout-form"><button type="submit" class="logout-btn">Log out</button></form>
+      {% else %}
+        <a href="/login" class="login-link">Log in</a>
+      {% endif %}
+    </div>
+  </header>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

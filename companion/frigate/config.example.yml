@@ -1,0 +1,179 @@
+# Example Frigate config for the optional detection/alerts companion — ADAPT IT.
+#
+# Frigate is OPTIONAL. The viewer works without it (the alert features just don't
+# appear). When present, the viewer polls Frigate's HTTP API for person/car
+# events and surfaces them on the timeline.
+#
+# Two structural choices that matter and carry over to any setup:
+#   * Frigate reads from MediaMTX's republished `<cam>src` path, NOT the camera
+#     directly — that adds a reader to MediaMTX, not a new camera-side pull (cheap
+#     cameras tolerate only a couple of pulls; keep it to recorder + MediaMTX).
+#   * Frigate does NOT own 24/7 recording here (continuous days: 0) — your main
+#     pipeline does. Frigate keeps only short event clips for the alert timeline.
+#
+# ALL coordinates below are EXAMPLE PLACEHOLDER SHAPES (simple rectangles). Draw
+# your own zones/masks in the viewer's Settings editor or the Frigate UI.
+
+# No MQTT broker — the viewer polls Frigate's HTTP API (/api/events).
+mqtt:
+  enabled: false
+
+# Detector is HARDWARE-SPECIFIC — this example uses OpenVINO on an Intel iGPU.
+# Swap for your hardware (cpu, edgetpu/Coral, tensorrt, etc.); see Frigate docs.
+detectors:
+  ov:
+    type: openvino
+    device: GPU
+
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+
+# Hardware-accelerated decode for the detect stream (match to your hardware).
+ffmpeg:
+  hwaccel_args: preset-vaapi
+
+cameras:
+  cam1:
+    ffmpeg:
+      inputs:
+        # FROM MEDIAMTX, not the camera. <cam>src is the raw camera republish;
+        # Frigate needs only video and ignores any audio. Reading it adds a
+        # reader to MediaMTX, not a new camera-side pull.
+        - path: rtsp://mediamtx:8554/cam1src
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+      width: 1920
+      height: 1080
+      fps: 5
+    objects:
+      track:
+        - person
+        - car
+    # Per-object zones: a zone only counts the object types it lists (`objects:`),
+    # which lets required_zones be per-object. Pattern shown here:
+    #   a partial zone that only counts CARS, plus a full-frame zone for PEOPLE.
+    # Zone coordinates are NORMALIZED 0-1 of the frame.
+    zones:
+      # EXAMPLE placeholder rectangle — replace with your own polygon.
+      car_zone:
+        coordinates: 0.3,0.3,0.7,0.3,0.7,0.7,0.3,0.7
+        objects:
+          - car
+        inertia: 3          # must be inside for N consecutive frames (anti-jitter)
+        loitering_time: 0   # raise to require dwell (ignore quick pass-throughs)
+      # Full-frame zone so people count anywhere; objects:[person] keeps cars out.
+      person_zone:
+        coordinates: 0.0,0.0,1.0,0.0,1.0,1.0,0.0,1.0
+        objects:
+          - person
+    snapshots:
+      enabled: true
+      # An object only needs to be in a zone its own type can trigger.
+      required_zones:
+        - car_zone
+        - person_zone
+      retain:
+        default: 14
+    # Event-only recording: continuous disabled (days: 0). Frigate keeps only
+    # alert/detection clips, retained ~14 days for the viewer timeline.
+    record:
+      enabled: true
+      continuous:
+        days: 0
+      alerts:
+        pre_capture: 5
+        post_capture: 5
+        retain:
+          days: 14
+          mode: motion
+      detections:
+        pre_capture: 5
+        post_capture: 5
+        retain:
+          days: 14
+          mode: motion
+    # required_zones is validated PER-CAMERA — it must reference zones defined on
+    # THIS camera (a zone from another camera fails validation).
+    review:
+      alerts:
+        required_zones:
+          - car_zone
+          - person_zone
+      detections:
+        required_zones:
+          - car_zone
+          - person_zone
+
+  # Second camera — frame-wide detection via a single full-frame zone, plus an
+  # example motion mask. (A full-frame zone is needed because review gates on
+  # zones; without one, objects would match no zone and never alert.)
+  cam2:
+    ffmpeg:
+      inputs:
+        - path: rtsp://mediamtx:8554/cam2src
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+      width: 1920
+      height: 1080
+      fps: 5
+    # Motion masks EXCLUDE an area from motion detection. Unlike zones, they use
+    # ABSOLUTE PIXELS (here the frame is 1920x1080). EXAMPLE rectangle only —
+    # replace with the region you want to ignore (e.g. a road, a neighbour's
+    # property, a flag/tree that triggers false motion).
+    motion:
+      mask:
+        - 0,0,300,0,300,200,0,200
+    objects:
+      track:
+        - person
+        - car
+    zones:
+      whole_frame:
+        coordinates: 0.0,0.0,1.0,0.0,1.0,1.0,0.0,1.0
+        objects:
+          - person
+          - car
+    snapshots:
+      enabled: true
+      required_zones:
+        - whole_frame
+      retain:
+        default: 14
+    record:
+      enabled: true
+      continuous:
+        days: 0
+      alerts:
+        pre_capture: 5
+        post_capture: 5
+        retain:
+          days: 14
+          mode: motion
+      detections:
+        pre_capture: 5
+        post_capture: 5
+        retain:
+          days: 14
+          mode: motion
+    review:
+      alerts:
+        required_zones:
+          - whole_frame
+      detections:
+        required_zones:
+          - whole_frame
+
+version: 0.17-1

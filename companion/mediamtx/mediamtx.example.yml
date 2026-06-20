@@ -1,0 +1,113 @@
+###############################################
+# Example MediaMTX config for nvr-viewer  —  ADAPT TO YOUR SETUP.
+#
+# Pulls RTSP from your cameras (always-on) and republishes as low-latency HLS,
+# consumed by the browser via hls.js.
+#
+# Camera source URLs (which contain credentials) are injected via env vars, since
+# MediaMTX does NOT substitute ${VAR} inline in this file. Each path's source
+# comes from MTX_PATHS_<NAME>_SOURCE; only non-sensitive options live in this file.
+#
+# Adding a camera: add a `paths:` entry here AND an MTX_PATHS_<NAME>_SOURCE line
+# in your env. The viewer auto-discovers it via the MediaMTX API. Keep the path
+# key equal to the camera's recording-folder name so live + playback line up.
+###############################################
+
+logLevel: info
+logDestinations: [stdout]
+
+# ---- API (used by nvr-viewer to enumerate cameras) ----
+api: true
+apiAddress: :9997
+
+# ---- Auth ----
+# This server has no published host ports; it's reachable only inside the private
+# Docker network, and external HLS access is gated by YOUR reverse proxy. So allow
+# all actions from any internal source.
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+      - action: read
+      - action: playback
+      - action: api
+      - action: metrics
+      - action: pprof
+
+# HLS access control (if any) is handled by your reverse proxy in front of this
+# server — see the README. Nothing in this file exposes cameras directly; the
+# RTSP server below is internal-only.
+
+# ---- Servers ----
+# RTSP server enabled ONLY for the internal audio-transcode loop: the runOnReady
+# ffmpeg (see paths) reads `<cam>src` and republishes `<cam>` over localhost:8554.
+# It is NOT exposed — publish no host ports for it and don't route :8554 — so the
+# RTSP server is reachable only inside the container / private Docker network.
+# Pulling RTSP from the cameras (a source operation) is unaffected by this toggle.
+rtsp: true
+rtmp: false
+webrtc: false
+srt: false
+
+# ---- HLS output ----
+hls: true
+hlsAddress: :8888
+# fmp4 (not lowLatency): with many inexpensive RTSP cameras the stream framerate
+# makes LL-HLS part durations drift, which errors on iOS/Safari. fmp4 keeps
+# latency ~3-5s and works reliably across iPhone Safari, Android Chrome, and
+# desktop Chrome/Firefox.
+hlsVariant: fmp4
+hlsAlwaysRemux: true        # keep generating segments even with no viewer (always-on)
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsAllowOrigins: ["*"]
+
+# ---- Cameras ----
+# Two paths per camera so we can add audio:
+#   <cam>src  — pulls RTSP from the real camera (e.g. G711 audio + H264 video).
+#               The source URL (with creds) is injected via
+#               MTX_PATHS_<CAM>SRC_SOURCE from your env.
+#   <cam>     — what HLS serves and the viewer plays. Fed by a runOnReady ffmpeg
+#               that reads <cam>src over localhost, transcodes the G711 audio to
+#               AAC (fmp4 HLS can carry AAC, not G711) and COPIES the video. It
+#               reads from MediaMTX, NEVER the camera, so it adds NO new camera
+#               connection — many cheap cameras tolerate only a couple of pulls;
+#               a 3rd concurrent pull can drop an existing one (e.g. cause
+#               multi-hour recording gaps). Keep it to recorder + MediaMTX.
+#
+# IMPORTANT naming constraint: the <cam>src paths MUST be a single token (no dash
+# or underscore). MediaMTX's env loader uses only the FIRST underscore segment
+# after MTX_PATHS_ as the map key, so MTX_PATHS_CAM1_SRC_SOURCE would target path
+# "cam1", not "cam1-src". Hence "cam1src". The viewer hides any path whose name
+# ends in "src" (see live.py).
+paths:
+  cam1src:
+    rtspTransport: tcp
+    sourceOnDemand: false
+    runOnReady: >
+      ffmpeg -nostdin -loglevel warning -rtsp_transport tcp
+      -i rtsp://localhost:8554/cam1src
+      -map 0:v:0 -map 0:a:0 -c:v copy -c:a aac -b:a 64k -ar 16000 -ac 1
+      -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam1
+    runOnReadyRestart: yes
+
+  cam2src:
+    rtspTransport: tcp
+    sourceOnDemand: false
+    runOnReady: >
+      ffmpeg -nostdin -loglevel warning -rtsp_transport tcp
+      -i rtsp://localhost:8554/cam2src
+      -map 0:v:0 -map 0:a:0 -c:v copy -c:a aac -b:a 64k -ar 16000 -ac 1
+      -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam2
+    runOnReadyRestart: yes
+
+  # HLS-served paths — no `source`, so they accept the ffmpeg publisher above.
+  # Names match the recording folders so live + playback line up.
+  cam1:
+  cam2:
+
+  # To add another camera, replicate the <cam>src + <cam> pair above with your
+  # own name, and add MTX_PATHS_<CAM>SRC_SOURCE to your env. If a camera has no
+  # audio, you can skip the transcode and serve it directly.

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Saved Alerts{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <span class="status">Flagged alerts · all cameras · 30s before → 5 min after</span>
+  <span class="spacer"></span>
+  <button id="sa-delete" class="btn" type="button" hidden>🗑 Delete alert</button>
+  <span id="sa-status" class="status"></span>
+</div>
+
+<div class="sa-layout">
+  <div id="sa-list" class="sa-list"></div>
+  <div class="sa-stage">
+    <div id="sa-grid" class="sa-grid"></div>
+    <div id="sa-controls" class="sa-controls" hidden>
+      <button id="sa-play" class="btn" type="button">❚❚ Pause</button>
+      <input id="sa-seek" class="sa-seek" type="range" min="0" max="100" step="0.1" value="0">
+      <span id="sa-time" class="time-readout">0:00</span>
+    </div>
+    <div id="sa-empty" class="empty" hidden>
+      No saved alerts yet. Flag an alert (🚩) on the Live or Recordings page — its clips from every camera are saved here.
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/saved.js?v={{ static_v }}"></script>
+{% endblock %}

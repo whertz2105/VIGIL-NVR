@@ -1,0 +1,7 @@
+# Runtime state lives in the mounted /data volume — never bake it into the image
+# (this includes admin.json's password hash + session secret, and settings.json).
+data/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo

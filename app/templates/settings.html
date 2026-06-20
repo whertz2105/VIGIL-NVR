@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="settings">
+  <div id="st-toast" class="st-toast" hidden></div>
+
+  <!-- ---------------- general / behaviour ---------------- -->
+  <section class="st-card">
+    <h2>General</h2>
+    <div class="st-grid">
+      <label>Brand / title<input id="st-brand" type="text" maxlength="60"></label>
+      <label>Timezone<input id="st-tz" type="text" placeholder="UTC" list="st-tzlist"></label>
+      <datalist id="st-tzlist"></datalist>
+    </div>
+  </section>
+
+  <section class="st-card">
+    <h2>Alerts &amp; clips</h2>
+    <div class="st-grid">
+      <label>Alert grouping window (s)<input id="st-group_gap_seconds" type="number" min="0" max="3600"></label>
+      <label>Silence duration (s)<input id="st-mute_seconds" type="number" min="60" max="86400"></label>
+      <label>Flag clip — before (s)<input id="st-flag_pre_seconds" type="number" min="0" max="600"></label>
+      <label>Flag clip — after (s)<input id="st-flag_post_seconds" type="number" min="5" max="3600"></label>
+      <label>Recordings mobile window (h)<input id="st-rec_mobile_window_hours" type="number" min="1" max="24"></label>
+    </div>
+  </section>
+
+  <section class="st-card">
+    <h2>Visible tabs</h2>
+    <div class="st-tabs">
+      <label><input type="checkbox" id="st-tab-live"> Live</label>
+      <label><input type="checkbox" id="st-tab-recordings"> Recordings</label>
+      <label><input type="checkbox" id="st-tab-timelapse"> Timelapse</label>
+      <label><input type="checkbox" id="st-tab-alerts"> Saved Alerts</label>
+    </div>
+  </section>
+
+  <!-- ---------------- cameras (display only) ---------------- -->
+  <section class="st-card">
+    <h2>Cameras <span class="st-note">display label, colour, order — as reported by MediaMTX</span></h2>
+    <div id="st-cameras" class="st-cameras"></div>
+  </section>
+
+  <div class="st-actions">
+    <button id="st-save" class="btn primary">Save settings</button>
+    <span class="st-note">Most changes apply immediately; timezone needs a container restart.</span>
+  </div>
+
+  <!-- ---------------- frigate zone/mask tool ---------------- -->
+  {% if frigate_tool %}
+  <section class="st-card" id="st-frigate">
+    <h2>Frigate zones &amp; masks</h2>
+    <p class="st-note">Zones = <strong>watched</strong> areas; masks = <strong>excluded</strong> areas (striped).
+       Colour identifies <em>which</em> zone — it does not indicate what a zone monitors. Saves write the
+       Frigate config with a timestamped backup; apply by restarting Frigate (no auto-reload).</p>
+    <div class="st-fg-top">
+      <label>Camera <select id="fg-cam"></select></label>
+      <button id="fg-load" class="btn" type="button">Load camera</button>
+      <label class="fg-latest-opt"><input id="fg-latest" type="checkbox"> Use most recent frame (default: noon)</label>
+      <div class="fg-modetabs" hidden>
+        <button class="btn fg-modetab on" data-mode="zones" type="button">Zones</button>
+        <button class="btn fg-modetab" data-mode="masks" type="button">Masks</button>
+      </div>
+    </div>
+    <div class="st-note fg-apply-note">Changes save to the config with a backup but do <strong>not</strong> reload Frigate. To apply them, restart Frigate yourself: <code>docker restart frigate</code></div>
+    <div class="fg-editor" hidden>
+      <div class="fg-side">
+        <ul id="fg-list" class="fg-list"></ul>
+        <button id="fg-new" class="btn" type="button">+ New</button>
+      </div>
+      <div class="fg-canvas-wrap">
+        <div class="st-fg-stage"><canvas id="fg-canvas" class="fg-canvas"></canvas></div>
+        <div id="fg-coordkind" class="st-note"></div>
+        <div class="fg-props" hidden>
+          <label id="fg-name-wrap">Name
+            <input id="fg-name" type="text" autocomplete="off" name="fg_zone_name_nofill"
+                   spellcheck="false" placeholder="zone name">
+          </label>
+          <label id="fg-monitors-wrap">Monitors
+            <select id="fg-monitors">
+              <option value="person">Person</option>
+              <option value="car">Car</option>
+              <option value="both">Both</option>
+              <option value="nothing">Nothing</option>
+            </select>
+          </label>
+          <div class="fg-prop-actions">
+            <button id="fg-save" class="btn primary" type="button">Save</button>
+            <button id="fg-delete" class="btn" type="button">Delete</button>
+            <button id="fg-cancel" class="btn" type="button">Cancel</button>
+          </div>
+        </div>
+        <div class="st-note">Click empty space to add a point · drag a point to move · right-click (or double-click) a point to remove.</div>
+        <div id="fg-required-wrap" class="fg-required-wrap">
+          <div class="st-note"><strong>Alert zones</strong> — which zones trigger alerts / detections / snapshots (Frigate <code>required_zones</code>). Empty = every detection alerts.</div>
+          <div id="fg-required" class="fg-required"></div>
+          <button id="fg-required-save" class="btn" type="button">Save alert zones</button>
+        </div>
+      </div>
+    </div>
+    <div id="fg-result" class="st-note" hidden></div>
+  </section>
+  {% endif %}
+
+  <!-- ---------------- change password ---------------- -->
+  <section class="st-card">
+    <h2>Change admin password</h2>
+    <div class="st-grid">
+      <label>Current password<input id="st-pw-cur" type="password" autocomplete="current-password"></label>
+      <label>New password (min 8)<input id="st-pw-new" type="password" autocomplete="new-password"></label>
+    </div>
+    <div class="st-actions">
+      <button id="st-pw-save" class="btn">Change password</button>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/settings.js?v={{ static_v }}"></script>
+{% endblock %}

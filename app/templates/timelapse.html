@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Timelapse{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <label class="field">Date
+    <select id="tl-date"></select>
+  </label>
+  <div class="field">Camera
+    <span id="tl-cams" class="cam-filter"></span>
+  </div>
+  <span class="spacer"></span>
+  <a id="tl-download" class="btn" download hidden>⤓ Download</a>
+  <span id="tl-status" class="status"></span>
+</div>
+
+<div class="tl-stage">
+  <video id="tl-video" class="tl-video" controls playsinline preload="metadata"></video>
+  <div id="tl-empty" class="empty" hidden>No timelapses yet. The nightly job builds one per camera for the previous day.</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/timelapse.js?v={{ static_v }}"></script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Live{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <span id="live-status" class="status">Loading cameras…</span>
+  <span class="spacer"></span>
+  <button id="mute-all" class="btn" type="button">Mute all</button>
+</div>
+<div id="grid" class="grid"></div>
+
+<div id="alerts-strip" class="alerts-strip" hidden>
+  <div class="alerts-head">
+    <span>Recent alerts · last 12h</span>
+    <span id="alerts-count" class="status"></span>
+    <span class="spacer"></span>
+    <span id="mute-controls" class="mute-controls"></span>
+  </div>
+  <div id="batch-bar" class="batch-bar" hidden>
+    <span id="batch-count" class="status"></span>
+    <button id="batch-benign" class="btn" type="button">✓ Benign</button>
+    <button id="batch-flag" class="btn" type="button">🚩 Flag</button>
+    <span class="spacer"></span>
+    <button id="batch-clear" class="btn" type="button">Clear</button>
+  </div>
+  <div id="alerts-track" class="alerts-track"></div>
+</div>
+
+<template id="tile-tpl">
+  <div class="tile">
+    <video playsinline muted autoplay></video>
+    <div class="tile-overlay">
+      <span class="tile-name"></span>
+      <span class="tile-badge"></span>
+    </div>
+  </div>
+</template>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/hls.min.js?v={{ static_v }}"></script>
+<script src="/static/js/live.js?v={{ static_v }}"></script>
+{% endblock %}

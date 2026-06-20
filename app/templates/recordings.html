@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Recordings{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <label class="field">Date
+    <select id="date-select"></select>
+  </label>
+  <div class="field">Cameras
+    <span id="cam-filter" class="cam-filter"></span>
+  </div>
+  <span class="spacer"></span>
+  <span id="rec-status" class="status"></span>
+</div>
+
+<div id="player-grid" class="grid rec-grid"></div>
+
+<div class="transport">
+  <button id="play-btn" class="btn" type="button" title="Play/Pause (space)">▶ Play</button>
+  <button id="back-btn" class="btn" type="button" title="Back 10s">« 10s</button>
+  <button id="fwd-btn" class="btn" type="button" title="Forward 10s">10s »</button>
+  <button id="prev-alert" class="btn" type="button" title="Previous alert">◀ Alert</button>
+  <button id="next-alert" class="btn" type="button" title="Next alert">Alert ▶</button>
+  <span id="time-readout" class="time-readout">—</span>
+  <span class="spacer"></span>
+  <span class="zoom-group">
+    <button id="zoom-out" class="btn" type="button" title="Zoom out">−</button>
+    <button id="zoom-in" class="btn" type="button" title="Zoom in">+</button>
+    <button id="zoom-fit" class="btn" type="button" title="Fit whole day">Fit day</button>
+  </span>
+</div>
+
+<div id="alert-review" class="alert-review" hidden>
+  <img id="ar-snap" class="ar-snap" alt="">
+  <span id="ar-info" class="ar-info"></span>
+  <span id="ar-pos" class="status"></span>
+  <span class="spacer"></span>
+  <span id="ar-actions">
+    <button id="ar-benign" class="btn" type="button">✓ Benign</button>
+    <button id="ar-flag" class="btn" type="button">🚩 Flag</button>
+  </span>
+  <span id="ar-mark" class="status" hidden></span>
+</div>
+
+<div class="timeline-wrap">
+  <div id="timeline" class="timeline">
+    <div id="timeline-axis" class="timeline-axis"></div>
+    <div id="timeline-lanes" class="timeline-lanes"></div>
+    <div id="events-row" class="events-row" hidden></div>
+    <div id="playhead" class="playhead" hidden><div class="playhead-handle"></div></div>
+    <div id="time-tooltip" class="time-tooltip" hidden></div>
+  </div>
+  <div class="timeline-hint">
+    Click to seek · drag to pan · scroll to zoom · drag the white handle to scrub
+    <span id="events-legend" class="events-legend" hidden></span>
+  </div>
+  <div id="event-preview" class="event-preview" hidden></div>
+</div>
+
+<template id="rec-tile-tpl">
+  <div class="tile">
+    <video playsinline muted preload="metadata"></video>
+    <div class="tile-overlay">
+      <span class="tile-name"></span>
+      <span class="tile-badge"></span>
+    </div>
+    <div class="no-footage" hidden>no footage at this time</div>
+  </div>
+</template>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/recordings.js?v={{ static_v }}"></script>
+{% endblock %}
