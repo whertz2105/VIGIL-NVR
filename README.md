@@ -1,4 +1,4 @@
-# nvr-viewer
+# VIGIL NVR
 
 A self-hosted **viewer / playback / alerts UI** for an existing camera setup. It
 sits on top of your own recorder + [MediaMTX](https://github.com/bluenviron/mediamtx)
